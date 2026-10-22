@@ -1,1 +1,52 @@
+name: Build Turnik Rush APK
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download project files
+        uses: actions/checkout@v4
+
+      - name: Extract game project
+        run: |
+          unzip -o TurnikRush-Android-Project.zip -d extracted
+          echo "Project archive extracted."
+          find extracted -maxdepth 4 -type f | head -100
+
+      - name: Find Android project
+        run: |
+          if [ -f "extracted/gradlew" ]; then
+            echo "PROJECT_DIR=extracted" >> "$GITHUB_ENV"
+          elif [ -f "extracted/TurnikRush/gradlew" ]; then
+            echo "PROJECT_DIR=extracted/TurnikRush" >> "$GITHUB_ENV"
+          else
+            echo "Could not find Gradle Android project."
+            echo "The ZIP must contain gradlew and the app folder."
+            exit 1
+          fi
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Turnik-Rush-debug-APK
+          path: |
+            extracted/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
